@@ -39,20 +39,28 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                bat 'terraform init'
+                script {
+                    def tfInitExitCode = bat(
+                        script: 'terraform init -no-color',
+                        returnStatus: true
+                    )
+                    if (tfInitExitCode != 0) {
+                        error "Terraform init failed with exit code ${tfInitExitCode}"
+                    }
+                }
             }
         }
 
         stage('Terraform Plan') {
             steps {
                 bat """
-                terraform plan ^
-                -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
-                -var="client_id=%AZURE_CLIENT_ID%" ^
-                -var="client_secret=%AZURE_CLIENT_SECRET%" ^
-                -var="tenant_id=%AZURE_TENANT_ID%" ^
-                -var="app_version=${env.BUILD_ID}" ^
-                -out=tfplan
+                    terraform plan ^
+                    -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
+                    -var="client_id=%AZURE_CLIENT_ID%" ^
+                    -var="client_secret=%AZURE_CLIENT_SECRET%" ^
+                    -var="tenant_id=%AZURE_TENANT_ID%" ^
+                    -var="app_version=${env.BUILD_ID}" ^
+                    -out=tfplan
                 """
             }
         }
@@ -60,12 +68,12 @@ pipeline {
         stage('Terraform Import') {
             steps {
                 bat """
-                terraform import ^
-                -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
-                -var="client_id=%AZURE_CLIENT_ID%" ^
-                -var="client_secret=%AZURE_CLIENT_SECRET%" ^
-                -var="tenant_id=%AZURE_TENANT_ID%" ^
-                azurerm_resource_group.phonebook_rg /subscriptions/%AZURE_SUBSCRIPTION_ID%/resourceGroups/%RESOURCE_GROUP%
+                    terraform import ^
+                    -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
+                    -var="client_id=%AZURE_CLIENT_ID%" ^
+                    -var="client_secret=%AZURE_CLIENT_SECRET%" ^
+                    -var="tenant_id=%AZURE_TENANT_ID%" ^
+                    azurerm_resource_group.phonebook_rg /subscriptions/%AZURE_SUBSCRIPTION_ID%/resourceGroups/%RESOURCE_GROUP%
                 """
             }
         }
