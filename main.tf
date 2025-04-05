@@ -19,6 +19,13 @@ provider "azurerm" {
   tenant_id       = var.tenant_id
 }
 
+variable "subscription_id" {}
+variable "client_id" {}
+variable "client_secret" {}
+variable "tenant_id" {}
+variable "app_version" {}
+variable "api_endpoint" {}
+
 resource "azurerm_resource_group" "phonebook_rg" {
   name     = "phonebook-app-rg"
   location = "eastus"
@@ -40,13 +47,13 @@ resource "azurerm_windows_web_app" "phonebook_app" {
 
   site_config {
     application_stack {
-      node_version = "~14"  # Changed from "14-lts" to valid value
+      node_version = "~14" // Valid format for Azure Web App
     }
   }
 
   app_settings = {
     WEBSITE_RUN_FROM_PACKAGE     = "1"
-    WEBSITE_NODE_DEFAULT_VERSION = "14-lts"  # This can remain as-is
+    WEBSITE_NODE_DEFAULT_VERSION = "14" // Simplified version
     REACT_APP_API_ENDPOINT       = var.api_endpoint
   }
 }
