@@ -36,13 +36,13 @@ resource "azurerm_windows_web_app" "phonebook_app" {
 
   site_config {
     application_stack {
-      node_version = "14-lts"
+      node_version = "~14"  # Changed from "14-lts" to valid value
     }
   }
 
   app_settings = {
     WEBSITE_RUN_FROM_PACKAGE     = "1"
-    WEBSITE_NODE_DEFAULT_VERSION = "14-lts"
+    WEBSITE_NODE_DEFAULT_VERSION = "14-lts"  # This can remain as-is
     REACT_APP_API_ENDPOINT       = var.api_endpoint
   }
 }
