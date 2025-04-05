@@ -4,11 +4,10 @@ pipeline {
     environment {
         AZURE_SUBSCRIPTION_ID = '6c1e198f-37fe-4942-b348-c597e7bef44b'
         AZURE_CLIENT_ID = '0e6e41d3-5440-4176-a735-9dfdaf0f886c'
-        AZURE_CLIENT_SECRET = 'LvU8Q~KHHAnB.prsihzhfKNBDsf6UwLqFBGVBcsY' // Use Jenkins credentials
+        AZURE_CLIENT_SECRET = 'LvU8Q~KHHAnB.prsihzhfKNBDsf6UwLqFBGVBcsY' // Recommendation: Use credentials('azure-client-secret') instead
         AZURE_TENANT_ID = '341f4047-ffad-4c4a-a0e7-b86c7963832b'
         RESOURCE_GROUP = 'phonebook-app-rg'
         APP_NAME_PREFIX = 'phonebook-app'
-        API_ENDPOINT = 'https://api.example.com' // Define API endpoint
     }
 
     stages {
@@ -19,7 +18,7 @@ pipeline {
                     branches: [[name: 'main']],
                     userRemoteConfigs: [[
                         url: 'https://github.com/Yash-Khandal/phone-book-app.git',
-                        credentialsId: 'github-credentials'
+                        credentialsId: 'github-credentials' // Ensure this is set up in Jenkins
                     ]]
                 ])
             }
@@ -53,28 +52,45 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                bat """
-                    terraform plan ^
-                    -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
-                    -var="client_id=%AZURE_CLIENT_ID%" ^
-                    -var="client_secret=%AZURE_CLIENT_SECRET%" ^
-                    -var="tenant_id=%AZURE_TENANT_ID%" ^
-                    -var="app_version=${env.BUILD_ID}" ^
-                    -out=tfplan
-                """
+                script {
+                    def tfPlanExitCode = bat(
+                        script: """
+                            terraform plan ^
+                            -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
+                            -var="client_id=%AZURE_CLIENT_ID%" ^
+                            -var="client_secret=%AZURE_CLIENT_SECRET%" ^
+                            -var="tenant_id=%AZURE_TENANT_ID%" ^
+                            -var="app_version=${env.BUILD_ID}" ^
+                            -out=tfplan
+                        """,
+                        returnStatus: true
+                    )
+                    if (tfPlanExitCode != 0) {
+                        error "Terraform plan failed with exit code ${tfPlanExitCode}"
+                    }
+                }
             }
         }
 
         stage('Terraform Import') {
             steps {
-                bat """
-                    terraform import ^
-                    -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
-                    -var="client_id=%AZURE_CLIENT_ID%" ^
-                    -var="client_secret=%AZURE_CLIENT_SECRET%" ^
-                    -var="tenant_id=%AZURE_TENANT_ID%" ^
-                    azurerm_resource_group.phonebook_rg /subscriptions/%AZURE_SUBSCRIPTION_ID%/resourceGroups/%RESOURCE_GROUP%
-                """
+                script {
+                    def tfImportExitCode = bat(
+                        script: """
+                            terraform import ^
+                            -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
+                            -var="client_id=%AZURE_CLIENT_ID%" ^
+                            -var="client_secret=%AZURE_CLIENT_SECRET%" ^
+                            -var="tenant_id=%AZURE_TENANT_ID%" ^
+                            -var="app_version=${env.BUILD_ID}" ^
+                            azurerm_resource_group.phonebook_rg /subscriptions/%AZURE_SUBSCRIPTION_ID%/resourceGroups/%RESOURCE_GROUP%
+                        """,
+                        returnStatus: true
+                    )
+                    if (tfImportExitCode != 0) {
+                        error "Terraform import failed with exit code ${tfImportExitCode}"
+                    }
+                }
             }
         }
 
