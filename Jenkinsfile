@@ -38,21 +38,32 @@ pipeline {
 
         stage('Terraform Plan/Apply') {
             steps {
-                bat '''
-                    echo subscription_id="%ARM_SUBSCRIPTION_ID%" > terraform.tfvars
-                    echo client_id="%ARM_CLIENT_ID%" >> terraform.tfvars
-                    echo client_secret="%ARM_CLIENT_SECRET%" >> terraform.tfvars
-                    echo tenant_id="%ARM_TENANT_ID%" >> terraform.tfvars
-                    echo resource_group_name="%resource_group_name%" >> terraform.tfvars
-                    echo location="East US" >> terraform.tfvars
-                    echo app_service_plan="phonebook-app-plan" >> terraform.tfvars
-                    echo web_app_name="%web_app_name%" >> terraform.tfvars
-                '''
-                
                 bat 'terraform import azurerm_resource_group.rg /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name% || echo "Import may have failed - continuing"'
                 
-                bat 'terraform plan -var-file="terraform.tfvars"'
-                bat 'terraform apply -auto-approve -var-file="terraform.tfvars"'
+                bat 'terraform import azurerm_service_plan.plan /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name%/providers/Microsoft.Web/serverFarms/phonebook-app-plan || echo "Import may have failed - continuing"'
+                
+                bat '''
+                    terraform plan ^
+                        -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
+                        -var "client_id=%ARM_CLIENT_ID%" ^
+                        -var "client_secret=%ARM_CLIENT_SECRET%" ^
+                        -var "tenant_id=%ARM_TENANT_ID%" ^
+                        -var "resource_group_name=%resource_group_name%" ^
+                        -var "location=East US" ^
+                        -var "app_service_plan=phonebook-app-plan" ^
+                        -var "web_app_name=%web_app_name%"
+                '''
+                bat '''
+                    terraform apply -auto-approve ^
+                        -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
+                        -var "client_id=%ARM_CLIENT_ID%" ^
+                        -var "client_secret=%ARM_CLIENT_SECRET%" ^
+                        -var "tenant_id=%ARM_TENANT_ID%" ^
+                        -var "resource_group_name=%resource_group_name%" ^
+                        -var "location=East US" ^
+                        -var "app_service_plan=phonebook-app-plan" ^
+                        -var "web_app_name=%web_app_name%"
+                '''
             }
         }
 
@@ -67,7 +78,6 @@ pipeline {
 
         stage('Deploy to Azure') {
             steps {
-                // Change to the react-app directory before zipping
                 dir('react-app') {
                     powershell 'Compress-Archive -Path "./build/*" -DestinationPath "../build.zip" -Force'
                 }
