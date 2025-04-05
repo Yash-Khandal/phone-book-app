@@ -50,6 +50,28 @@ pipeline {
             }
         }
 
+        stage('Terraform Import') {
+            steps {
+                script {
+                    def tfImportExitCode = bat(
+                        script: """
+                            terraform import ^
+                            -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
+                            -var="client_id=%AZURE_CLIENT_ID%" ^
+                            -var="client_secret=%AZURE_CLIENT_SECRET%" ^
+                            -var="tenant_id=%AZURE_TENANT_ID%" ^
+                            -var="app_version=${env.BUILD_ID}" ^
+                            azurerm_resource_group.phonebook_rg /subscriptions/%AZURE_SUBSCRIPTION_ID%/resourceGroups/%RESOURCE_GROUP%
+                        """,
+                        returnStatus: true
+                    )
+                    if (tfImportExitCode != 0 && tfImportExitCode != 2) { // Exit code 2 means resource already imported, which is fine
+                        error "Terraform import failed with exit code ${tfImportExitCode}"
+                    }
+                }
+            }
+        }
+
         stage('Terraform Plan') {
             steps {
                 script {
@@ -67,28 +89,6 @@ pipeline {
                     )
                     if (tfPlanExitCode != 0) {
                         error "Terraform plan failed with exit code ${tfPlanExitCode}"
-                    }
-                }
-            }
-        }
-
-        stage('Terraform Import') {
-            steps {
-                script {
-                    def tfImportExitCode = bat(
-                        script: """
-                            terraform import ^
-                            -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
-                            -var="client_id=%AZURE_CLIENT_ID%" ^
-                            -var="client_secret=%AZURE_CLIENT_SECRET%" ^
-                            -var="tenant_id=%AZURE_TENANT_ID%" ^
-                            -var="app_version=${env.BUILD_ID}" ^
-                            azurerm_resource_group.phonebook_rg /subscriptions/%AZURE_SUBSCRIPTION_ID%/resourceGroups/%RESOURCE_GROUP%
-                        """,
-                        returnStatus: true
-                    )
-                    if (tfImportExitCode != 0) {
-                        error "Terraform import failed with exit code ${tfImportExitCode}"
                     }
                 }
             }
