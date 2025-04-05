@@ -19,7 +19,7 @@ pipeline {
         
         stage('Install Dependencies') {
             steps {
-                bat 'npm install'  # Use 'sh' if on Linux
+                bat 'npm install'  
             }
         }
         
@@ -70,7 +70,7 @@ pipeline {
     post {
         always {
             cleanWs()
-            bat 'set AZURE_CLIENT_SECRET='  # Clean up secret
+            bat 'set AZURE_CLIENT_SECRET='  
         }
     }
 }
