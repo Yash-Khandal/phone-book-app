@@ -6,14 +6,14 @@ pipeline {
         ARM_CLIENT_SECRET   = credentials('AZURE_CLIENT_SECRET')
         ARM_SUBSCRIPTION_ID = credentials('AZURE_SUBSCRIPTION_ID')
         ARM_TENANT_ID       = credentials('AZURE_TENANT_ID')
-        resource_group_name = 'react-firebase-rg'
-        web_app_name        = 'react-firebase-app-viren'
+        resource_group_name = 'phonebook-app-rg'
+        web_app_name        = 'phonebook-app'
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/Virendra-94/Task-Manager-Azure'
+                git branch: 'main', url: 'https://github.com/Yash-Khandal/phone-book-app.git'
             }
         }
 
@@ -25,10 +25,10 @@ pipeline {
                     echo client_id="%ARM_CLIENT_ID%" >> terraform.tfvars
                     echo client_secret="%ARM_CLIENT_SECRET%" >> terraform.tfvars
                     echo tenant_id="%ARM_TENANT_ID%" >> terraform.tfvars
-                    echo resource_group_name="react-firebase-rg" >> terraform.tfvars
+                    echo resource_group_name="phonebook-app-rg" >> terraform.tfvars
                     echo location="East US" >> terraform.tfvars
-                    echo app_service_plan="react-plan-viren" >> terraform.tfvars
-                    echo web_app_name="react-firebase-app-viren" >> terraform.tfvars
+                    echo app_service_plan="phonebook-app-plan" >> terraform.tfvars
+                    echo web_app_name="phonebook-app" >> terraform.tfvars
                 '''
                 bat 'terraform plan -var-file="terraform.tfvars"'
                 bat 'terraform apply -auto-approve -var-file="terraform.tfvars"'
@@ -62,3 +62,4 @@ pipeline {
         }
     }
 }
+
