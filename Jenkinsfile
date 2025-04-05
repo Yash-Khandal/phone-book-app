@@ -171,12 +171,21 @@ pipeline {
                 dir('react-app') {
                     bat 'npm install'
                     bat 'npm run build'
-                    bat 'dir'
+                    bat '''
+                        echo Current directory: %CD%
+                        dir
+                        if exist build (
+                            echo Build directory exists!
+                            dir build
+                        ) else (
+                            echo Build directory not found in %CD%!
+                        )
+                    '''
                     bat '''
                         if exist build (
                             7z a -tzip "%WORKSPACE%\\build.zip" .\\build\\*
                         ) else (
-                            echo Build directory not found!
+                            echo Build directory still not found after debug!
                             dir
                             exit /b 1
                         )
