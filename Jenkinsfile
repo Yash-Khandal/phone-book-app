@@ -39,6 +39,8 @@ pipeline {
         stage('Terraform Plan/Apply') {
             steps {
                 bat '''
+                    set RETRY_COUNT=0
+                    :retry_rg
                     terraform import ^
                         -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
                         -var "client_id=%ARM_CLIENT_ID%" ^
@@ -49,10 +51,19 @@ pipeline {
                         -var "app_service_plan=phonebook-app-plan" ^
                         -var "web_app_name=%web_app_name%" ^
                         azurerm_resource_group.rg /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name% ^
-                        || echo "Import may have failed - continuing"
+                        && exit /b 0
+                    set /a RETRY_COUNT+=1
+                    if %RETRY_COUNT% LSS 3 (
+                        echo Retry %RETRY_COUNT% of 3 for resource group import failed, waiting 30 seconds...
+                        timeout /t 30 /nobreak >nul 2>&1
+                        goto retry_rg
+                    )
+                    echo Resource group import failed after 3 retries, continuing anyway
                 '''
                 
                 bat '''
+                    set RETRY_COUNT=0
+                    :retry_plan
                     terraform import ^
                         -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
                         -var "client_id=%ARM_CLIENT_ID%" ^
@@ -63,10 +74,19 @@ pipeline {
                         -var "app_service_plan=phonebook-app-plan" ^
                         -var "web_app_name=%web_app_name%" ^
                         azurerm_service_plan.plan /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name%/providers/Microsoft.Web/serverFarms/phonebook-app-plan ^
-                        || echo "Import may have failed - continuing"
+                        && exit /b 0
+                    set /a RETRY_COUNT+=1
+                    if %RETRY_COUNT% LSS 3 (
+                        echo Retry %RETRY_COUNT% of 3 for service plan import failed, waiting 30 seconds...
+                        timeout /t 30 /nobreak >nul 2>&1
+                        goto retry_plan
+                    )
+                    echo Service plan import failed after 3 retries, continuing anyway
                 '''
                 
                 bat '''
+                    set RETRY_COUNT=0
+                    :retry_app
                     terraform import ^
                         -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
                         -var "client_id=%ARM_CLIENT_ID%" ^
@@ -77,7 +97,21 @@ pipeline {
                         -var "app_service_plan=phonebook-app-plan" ^
                         -var "web_app_name=%web_app_name%" ^
                         azurerm_linux_web_app.app /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name%/providers/Microsoft.Web/sites/%web_app_name% ^
-                        || echo "Import may have failed - continuing"
+                        && exit /b 0
+                    set /a RETRY_COUNT+=1
+                    if %RETRY_COUNT% LSS 3 (
+                        echo Retry %RETRY_COUNT% of 3 for web app import failed, waiting 30 seconds...
+                        timeout /t 30 /nobreak >nul 2>&1
+                        goto retry_app
+                    )
+                    echo Web app import failed after 3 retries
+                    exit /b 1
+                '''
+                
+                // Debug: Check network connectivity
+                bat '''
+                    echo Testing connectivity to management.azure.com...
+                    ping management.azure.com -n 4
                 '''
                 
                 // Debug: Output the Terraform state
