@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        // Use Jenkins credentials for sensitive data
         ARM_CLIENT_ID       = '0e6e41d3-5440-4176-a735-9dfdaf0f886c'
         ARM_CLIENT_SECRET   = 'LvU8Q~KHHAnB.prsihzhfKNBDsf6UwLqFBGVBcsY'
         ARM_SUBSCRIPTION_ID = '6c1e198f-37fe-4942-b348-c597e7bef44b'
@@ -14,7 +13,6 @@ pipeline {
     stages {
         stage('Clean Workspace') {
             steps {
-                // Clean up previous runs
                 bat '''
                     del terraform.tfvars 2> nul || exit 0
                     del build.zip 2> nul || exit 0
@@ -27,24 +25,19 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 git branch: 'main', 
-                url: 'https://github.com/Yash-Khandal/phone-book-app.git',
-                credentialsId: 'github-credentials' // Add your GitHub credentials in Jenkins
+                url: 'https://github.com/Yash-Khandal/phone-book-app.git'
             }
         }
 
         stage('Terraform Init') {
             steps {
-                // Initialize with local backend first
                 bat 'terraform init -reconfigure'
-                
-                // Upgrade providers if needed
                 bat 'terraform init -upgrade'
             }
         }
 
         stage('Terraform Plan/Apply') {
             steps {
-                // Generate terraform.tfvars
                 bat '''
                     echo subscription_id="%ARM_SUBSCRIPTION_ID%" > terraform.tfvars
                     echo client_id="%ARM_CLIENT_ID%" >> terraform.tfvars
@@ -56,7 +49,9 @@ pipeline {
                     echo web_app_name="%web_app_name%" >> terraform.tfvars
                 '''
                 
-                // Plan and Apply
+                // Import existing resource group
+                bat 'terraform import azurerm_resource_group.rg /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name% || echo "Import may have failed - continuing"'
+                
                 bat 'terraform plan -var-file="terraform.tfvars"'
                 bat 'terraform apply -auto-approve -var-file="terraform.tfvars"'
             }
@@ -67,17 +62,13 @@ pipeline {
                 dir('react-app') {
                     bat 'npm install'
                     bat 'npm run build'
-                    bat 'dir build'  // Verify build output
                 }
             }
         }
 
         stage('Deploy to Azure') {
             steps {
-                // Zip the React build
                 powershell 'Compress-Archive -Path "react-app\\build\\*" -DestinationPath "build.zip" -Force'
-                
-                // Deploy to Azure Web App
                 bat '''
                     az login --service-principal -u %ARM_CLIENT_ID% -p %ARM_CLIENT_SECRET% --tenant %ARM_TENANT_ID%
                     az webapp deploy --resource-group %resource_group_name% --name %web_app_name% --src-path build.zip --type zip
@@ -88,7 +79,6 @@ pipeline {
 
     post {
         always {
-            // Clean up sensitive files
             bat '''
                 del terraform.tfvars 2> nul || exit 0
                 del build.zip 2> nul || exit 0
