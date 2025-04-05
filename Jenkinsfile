@@ -2,18 +2,18 @@ pipeline {
     agent any
     
     environment {
-        AZURE_SUBSCRIPTION_ID = credentials('azure-subscription-id')
-        AZURE_CLIENT_ID = credentials('azure-client-id')
-        AZURE_CLIENT_SECRET = credentials('azure-client-secret')
-        AZURE_TENANT_ID = credentials('azure-tenant-id')
-        RESOURCE_GROUP = 'phonebook-app-rg'
+        AZURE_SUBSCRIPTION_ID = '6c1e198f-37fe-4942-b348-c597e7bef44b'
+        AZURE_CLIENT_ID = '0e6e41d3-5440-4176-a735-9dfdaf0f886c'
+        AZURE_CLIENT_SECRET = 'LvU8Q~KHHAnB.prsihzhfKNBDsf6UwLqFBGVBcsY'
+        AZURE_TENANT_ID = '341f4047-ffad-4c4a-a0e7-b86c7963832b'
+        RESOURCE_GROUP = 'phonebook-app-rg
         APP_NAME_PREFIX = 'phonebook-app'
     }
     
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/your-username/your-phonebook-repo.git'
+                git branch: 'main', url: 'https://github.com/Yash-Khandal/phone-book-app.git'
             }
         }
         
