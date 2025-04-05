@@ -117,7 +117,14 @@ pipeline {
         stage('Deploy to Azure') {
             steps {
                 dir('react-app') {
-                    powershell 'Compress-Archive -Path "./build/*" -DestinationPath "../build.zip" -Force'
+                    powershell '''
+                        if (Test-Path -Path "build") {
+                            Compress-Archive -Path "build/*" -DestinationPath "../build.zip" -Force
+                        } else {
+                            Write-Error "Build directory not found!"
+                            exit 1
+                        }
+                    '''
                 }
                 
                 bat '''
