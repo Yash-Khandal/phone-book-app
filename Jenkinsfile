@@ -38,9 +38,33 @@ pipeline {
 
         stage('Terraform Plan/Apply') {
             steps {
-                bat 'terraform import azurerm_resource_group.rg /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name% || echo "Import may have failed - continuing"'
+                bat '''
+                    terraform import ^
+                        -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
+                        -var "client_id=%ARM_CLIENT_ID%" ^
+                        -var "client_secret=%ARM_CLIENT_SECRET%" ^
+                        -var "tenant_id=%ARM_TENANT_ID%" ^
+                        -var "resource_group_name=%resource_group_name%" ^
+                        -var "location=East US" ^
+                        -var "app_service_plan=phonebook-app-plan" ^
+                        -var "web_app_name=%web_app_name%" ^
+                        azurerm_resource_group.rg /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name% ^
+                        || echo "Import may have failed - continuing"
+                '''
                 
-                bat 'terraform import azurerm_service_plan.plan /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name%/providers/Microsoft.Web/serverFarms/phonebook-app-plan || echo "Import may have failed - continuing"'
+                bat '''
+                    terraform import ^
+                        -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
+                        -var "client_id=%ARM_CLIENT_ID%" ^
+                        -var "client_secret=%ARM_CLIENT_SECRET%" ^
+                        -var "tenant_id=%ARM_TENANT_ID%" ^
+                        -var "resource_group_name=%resource_group_name%" ^
+                        -var "location=East US" ^
+                        -var "app_service_plan=phonebook-app-plan" ^
+                        -var "web_app_name=%web_app_name%" ^
+                        azurerm_service_plan.plan /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name%/providers/Microsoft.Web/serverFarms/phonebook-app-plan ^
+                        || echo "Import may have failed - continuing"
+                '''
                 
                 bat '''
                     terraform plan ^
