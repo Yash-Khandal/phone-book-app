@@ -67,6 +67,20 @@ pipeline {
                 '''
                 
                 bat '''
+                    terraform import ^
+                        -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
+                        -var "client_id=%ARM_CLIENT_ID%" ^
+                        -var "client_secret=%ARM_CLIENT_SECRET%" ^
+                        -var "tenant_id=%ARM_TENANT_ID%" ^
+                        -var "resource_group_name=%resource_group_name%" ^
+                        -var "location=East US" ^
+                        -var "app_service_plan=phonebook-app-plan" ^
+                        -var "web_app_name=%web_app_name%" ^
+                        azurerm_linux_web_app.app /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name%/providers/Microsoft.Web/sites/%web_app_name% ^
+                        || echo "Import may have failed - continuing"
+                '''
+                
+                bat '''
                     terraform plan ^
                         -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
                         -var "client_id=%ARM_CLIENT_ID%" ^
@@ -123,8 +137,8 @@ pipeline {
         }
         success {
             script {
-                def WEBAPP_URL = sh(
-                    script: 'terraform output -raw webapp_url', 
+                def WEBAPP_URL = bat(
+                    script: 'terraform output -raw webapp_url',
                     returnStdout: true
                 ).trim()
                 echo "✅ Deployment Successful!"
