@@ -24,11 +24,11 @@ resource "azurerm_service_plan" "phonebook_plan" {
   name                = "phonebook-app-service-plan"
   resource_group_name = azurerm_resource_group.phonebook_rg.name
   location            = azurerm_resource_group.phonebook_rg.location
-  os_type             = "Linux"
+  os_type             = "Windows"
   sku_name            = "F1"
 }
 
-resource "azurerm_linux_web_app" "phonebook_app" {
+resource "azurerm_windows_web_app" "phonebook_app" {
   name                = "phonebook-app-${lower(substr(sha1(var.app_version), 0, 8))}"
   resource_group_name = azurerm_resource_group.phonebook_rg.name
   location            = azurerm_service_plan.phonebook_plan.location
@@ -38,26 +38,15 @@ resource "azurerm_linux_web_app" "phonebook_app" {
     application_stack {
       node_version = "14-lts"
     }
-    app_command_line = "npm run start"
   }
 
   app_settings = {
-    WEBSITE_RUN_FROM_PACKAGE = "1"
-    REACT_APP_API_ENDPOINT   = var.api_endpoint
+    WEBSITE_RUN_FROM_PACKAGE     = "1"
+    WEBSITE_NODE_DEFAULT_VERSION = "14-lts"
+    REACT_APP_API_ENDPOINT       = var.api_endpoint
   }
 }
 
 output "app_url" {
-  value = "https://${azurerm_linux_web_app.phonebook_app.default_hostname}"
-}
-
-variable "subscription_id" {}
-variable "client_id" {}
-variable "client_secret" {}
-variable "tenant_id" {}
-variable "app_version" {
-  default = "1.0.0"
-}
-variable "api_endpoint" {
-  default = "https://api.example.com"
+  value = "https://${azurerm_windows_web_app.phonebook_app.default_hostname}"
 }
