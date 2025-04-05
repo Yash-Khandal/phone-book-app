@@ -2,10 +2,11 @@ pipeline {
     agent any
 
     environment {
-        ARM_CLIENT_ID       = '0e6e41d3-5440-4176-a735-9dfdaf0f886c'
-        ARM_CLIENT_SECRET   = 'LvU8Q~KHHAnB.prsihzhfKNBDsf6UwLqFBGVBcsY'
-        ARM_SUBSCRIPTION_ID = '6c1e198f-37fe-4942-b348-c597e7bef44b'
-        ARM_TENANT_ID       = '341f4047-ffad-4c4a-a0e7-b86c7963832b'
+        // Use Jenkins Credentials for sensitive data (Recommended)
+        ARM_CLIENT_ID       = credentials('AZURE_CLIENT_ID')          // Store in Jenkins Credentials
+        ARM_CLIENT_SECRET   = credentials('AZURE_CLIENT_SECRET')      // Store in Jenkins Credentials
+        ARM_SUBSCRIPTION_ID = '6c1e198f-37fe-4942-b348-c597e7bef44b'  // Can also use credentials()
+        ARM_TENANT_ID       = '341f4047-ffad-4c4a-a0e7-b86c7963832b'  // Can also use credentials()
         resource_group_name = 'phonebook-app-rg'
         web_app_name        = 'phonebook-app'
     }
@@ -19,7 +20,10 @@ pipeline {
 
         stage('Terraform Init/Plan/Apply') {
             steps {
-                bat 'terraform init'
+                // Initialize Terraform (force reconfigure to avoid backend errors)
+                bat 'terraform init -reconfigure'
+
+                // Generate terraform.tfvars dynamically
                 bat '''
                     echo subscription_id="%ARM_SUBSCRIPTION_ID%" > terraform.tfvars
                     echo client_id="%ARM_CLIENT_ID%" >> terraform.tfvars
@@ -30,6 +34,8 @@ pipeline {
                     echo app_service_plan="phonebook-app-plan" >> terraform.tfvars
                     echo web_app_name="phonebook-app" >> terraform.tfvars
                 '''
+
+                // Plan and Apply
                 bat 'terraform plan -var-file="terraform.tfvars"'
                 bat 'terraform apply -auto-approve -var-file="terraform.tfvars"'
             }
@@ -40,26 +46,41 @@ pipeline {
                 dir('react-app') {
                     bat 'npm install'
                     bat 'npm run build'
-                    // Verify build folder
-                    bat 'dir build'
+                    bat 'dir build'  // Verify build output
                 }
             }
         }
 
         stage('Deploy to Azure') {
             steps {
-                // Zip the build folder (PowerShell)
+                // Zip the React build folder
                 powershell '''
-                    Compress-Archive -Path "react-app\\build\\*" -DestinationPath "build.zip"
+                    Compress-Archive -Path "react-app\\build\\*" -DestinationPath "build.zip" -Force
                 '''
-                
-                // Deploy using Azure CLI
-                bat """
+
+                // Deploy to Azure Web App
+                bat '''
                     az login --service-principal -u %ARM_CLIENT_ID% -p %ARM_CLIENT_SECRET% --tenant %ARM_TENANT_ID%
                     az webapp deploy --resource-group %resource_group_name% --name %web_app_name% --src-path build.zip --type zip
-                """
+                '''
             }
         }
     }
-}
 
+    post {
+        always {
+            // Clean up workspace (optional)
+            bat 'del terraform.tfvars build.zip'
+        }
+        success {
+            // Get Web App URL from Terraform output
+            script {
+                def WEBAPP_URL = sh(script: 'terraform output -raw webapp_url', returnStdout: true).trim()
+                echo "✅ Deployment Successful! Web App URL: ${WEBAPP_URL}"
+            }
+        }
+        failure {
+            echo "❌ Pipeline Failed. Check logs for errors."
+        }
+    }
+}
