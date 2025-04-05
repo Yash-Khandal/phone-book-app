@@ -24,7 +24,6 @@ variable "client_id" {}
 variable "client_secret" {}
 variable "tenant_id" {}
 variable "app_version" {}
-variable "api_endpoint" {}
 
 resource "azurerm_resource_group" "phonebook_rg" {
   name     = "phonebook-app-rg"
@@ -54,7 +53,7 @@ resource "azurerm_windows_web_app" "phonebook_app" {
   app_settings = {
     WEBSITE_RUN_FROM_PACKAGE     = "1"
     WEBSITE_NODE_DEFAULT_VERSION = "14" // Simplified version
-    REACT_APP_API_ENDPOINT       = var.api_endpoint
+    # Removed REACT_APP_API_ENDPOINT since it's not needed
   }
 }
 
