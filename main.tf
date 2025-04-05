@@ -6,7 +6,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.0"
+      version = "~> 4.0"  # Updated from ~> 3.0 to allow 4.x versions
     }
   }
 }
@@ -46,14 +46,13 @@ resource "azurerm_windows_web_app" "phonebook_app" {
 
   site_config {
     application_stack {
-      node_version = "~14" // Valid format for Azure Web App
+      node_version = "~14"
     }
   }
 
   app_settings = {
     WEBSITE_RUN_FROM_PACKAGE     = "1"
-    WEBSITE_NODE_DEFAULT_VERSION = "14" // Simplified version
-    # Removed REACT_APP_API_ENDPOINT since it's not needed
+    WEBSITE_NODE_DEFAULT_VERSION = "14"
   }
 }
 
