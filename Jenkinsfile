@@ -13,65 +13,54 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Yash-Khandal/phone-book-app.git'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/Yash-Khandal/phone-book-app.git',
+                        credentialsId: 'github-creds' // Add your GitHub credentials in Jenkins
+                    ]],
+                    extensions: [[
+                        $class: 'CleanBeforeCheckout'
+                    ]]
+                ])
             }
         }
         
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
+                bat 'npm install' // Use 'bat' instead of 'sh' for Windows
             }
         }
         
         stage('Build') {
             steps {
-                sh 'npm run build'
+                bat 'npm run build'
             }
         }
         
         stage('Terraform Init') {
             steps {
-                dir('infra') {
-                    sh 'terraform init'
-                }
+                bat 'terraform init'
             }
         }
         
         stage('Terraform Plan') {
             steps {
-                dir('infra') {
-                    sh """
-                    terraform plan \
-                    -var="subscription_id=${AZURE_SUBSCRIPTION_ID}" \
-                    -var="client_id=${AZURE_CLIENT_ID}" \
-                    -var="client_secret=${AZURE_CLIENT_SECRET}" \
-                    -var="tenant_id=${AZURE_TENANT_ID}" \
-                    -var="app_version=${env.BUILD_ID}" \
-                    -out=tfplan
-                    """
-                }
+                bat """
+                terraform plan ^
+                -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
+                -var="client_id=%AZURE_CLIENT_ID%" ^
+                -var="client_secret=%AZURE_CLIENT_SECRET%" ^
+                -var="tenant_id=%AZURE_TENANT_ID%" ^
+                -out=tfplan
+                """
             }
         }
         
         stage('Terraform Apply') {
             steps {
-                dir('infra') {
-                    sh 'terraform apply -auto-approve tfplan'
-                }
-            }
-        }
-        
-        stage('Get App URL') {
-            steps {
-                script {
-                    dir('infra') {
-                        env.APP_URL = sh(
-                            script: 'terraform output -raw app_url',
-                            returnStdout: true
-                        ).trim()
-                    }
-                    echo "Application deployed at: ${env.APP_URL}"
-                }
+                bat 'terraform apply -auto-approve tfplan'
             }
         }
     }
@@ -79,12 +68,10 @@ pipeline {
     post {
         always {
             cleanWs()
-        }
-        success {
-            slackSend(color: "good", message: "Phonebook App Deployment Successful: ${env.APP_URL}")
-        }
-        failure {
-            slackSend(color: "danger", message: "Phonebook App Deployment Failed: ${env.BUILD_URL}")
+            script {
+                def appUrl = bat(script: 'terraform output -raw app_url', returnStdout: true).trim()
+                echo "Application deployed at: ${appUrl}"
+            }
         }
     }
 }
