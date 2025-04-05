@@ -56,6 +56,14 @@ pipeline {
             }
         }
         
+        stage('Terraform Import') {
+            steps {
+                bat """
+                terraform import azurerm_resource_group.phonebook_rg /subscriptions/%AZURE_SUBSCRIPTION_ID%/resourceGroups/%RESOURCE_GROUP%
+                """
+            }
+        }
+
         stage('Terraform Apply') {
             steps {
                 bat 'terraform apply -auto-approve tfplan'
