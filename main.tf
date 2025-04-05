@@ -6,7 +6,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 4.0"  # Updated from ~> 3.0 to allow 4.x versions
+      version = "~> 4.0"
     }
   }
 }
@@ -48,6 +48,7 @@ resource "azurerm_windows_web_app" "phonebook_app" {
     application_stack {
       node_version = "~14"
     }
+    always_on = false  # Explicitly set to false for F1 SKU
   }
 
   app_settings = {
