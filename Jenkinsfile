@@ -98,8 +98,9 @@ pipeline {
                     }
                 }
             }
-            // Mask sensitive information
-            env.AZURE_CLIENT_SECRET = ''
+            withEnv(["AZURE_CLIENT_SECRET="]) {
+                // This clears the AZURE_CLIENT_SECRET variable
+            }
         }
     }
 }
