@@ -108,19 +108,16 @@ pipeline {
                     exit /b 1
                 '''
                 
-                // Debug: Check network connectivity
                 bat '''
                     echo Testing connectivity to management.azure.com...
                     ping management.azure.com -n 4
                 '''
                 
-                // Debug: Output the Terraform state
                 bat '''
                     terraform state list
                     terraform state show azurerm_linux_web_app.app
                 '''
                 
-                // Retry terraform plan up to 3 times
                 bat '''
                     set RETRY_COUNT=0
                     :retry_plan
@@ -144,7 +141,6 @@ pipeline {
                     exit /b 1
                 '''
                 
-                // Retry terraform apply up to 3 times
                 bat '''
                     set RETRY_COUNT=0
                     :retry_apply
@@ -175,14 +171,15 @@ pipeline {
                 dir('react-app') {
                     bat 'npm install'
                     bat 'npm run build'
-                    powershell '''
-                        if (Test-Path -Path "build") {
-                            Compress-Archive -Path "build/*" -DestinationPath "$env:WORKSPACE/build.zip" -Force
-                        } else {
-                            Write-Error "Build directory not found in $PWD!"
+                    bat 'dir'
+                    bat '''
+                        if exist build (
+                            7z a -tzip "%WORKSPACE%\\build.zip" .\\build\\*
+                        ) else (
+                            echo Build directory not found!
                             dir
-                            exit 1
-                        }
+                            exit /b 1
+                        )
                     '''
                 }
             }
