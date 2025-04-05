@@ -52,8 +52,20 @@ pipeline {
                 -var="client_secret=%AZURE_CLIENT_SECRET%" ^
                 -var="tenant_id=%AZURE_TENANT_ID%" ^
                 -var="app_version=${env.BUILD_ID}" ^
-                -var="api_endpoint=%API_ENDPOINT%" ^
                 -out=tfplan
+                """
+            }
+        }
+
+        stage('Terraform Import') {
+            steps {
+                bat """
+                terraform import ^
+                -var="subscription_id=%AZURE_SUBSCRIPTION_ID%" ^
+                -var="client_id=%AZURE_CLIENT_ID%" ^
+                -var="client_secret=%AZURE_CLIENT_SECRET%" ^
+                -var="tenant_id=%AZURE_TENANT_ID%" ^
+                azurerm_resource_group.phonebook_rg /subscriptions/%AZURE_SUBSCRIPTION_ID%/resourceGroups/%RESOURCE_GROUP%
                 """
             }
         }
@@ -79,11 +91,15 @@ pipeline {
 
     post {
         always {
-            cleanWs() // Clean workspace
             script {
-                // Mask sensitive information
-                env.AZURE_CLIENT_SECRET = ''
+                if (currentBuild.result != null) {
+                    node {
+                        cleanWs() // Clean workspace
+                    }
+                }
             }
+            // Mask sensitive information
+            env.AZURE_CLIENT_SECRET = ''
         }
     }
 }
