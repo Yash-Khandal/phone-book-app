@@ -89,7 +89,7 @@ pipeline {
                 // Retry terraform plan up to 3 times
                 bat '''
                     set RETRY_COUNT=0
-                    :retry
+                    :retry_plan
                     terraform plan ^
                         -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
                         -var "client_id=%ARM_CLIENT_ID%" ^
@@ -102,15 +102,18 @@ pipeline {
                         && exit /b 0
                     set /a RETRY_COUNT+=1
                     if %RETRY_COUNT% LSS 3 (
-                        echo Retry %RETRY_COUNT% of 3: terraform plan failed, waiting 10 seconds...
-                        timeout /t 10 /nobreak
-                        goto retry
+                        echo Retry %RETRY_COUNT% of 3 for terraform plan failed, waiting 30 seconds...
+                        timeout /t 30 /nobreak >nul 2>&1
+                        goto retry_plan
                     )
                     echo Terraform plan failed after 3 retries
                     exit /b 1
                 '''
                 
+                // Retry terraform apply up to 3 times
                 bat '''
+                    set RETRY_COUNT=0
+                    :retry_apply
                     terraform apply -auto-approve ^
                         -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
                         -var "client_id=%ARM_CLIENT_ID%" ^
@@ -119,7 +122,16 @@ pipeline {
                         -var "resource_group_name=%resource_group_name%" ^
                         -var "location=East US" ^
                         -var "app_service_plan=phonebook-app-plan" ^
-                        -var "web_app_name=%web_app_name%"
+                        -var "web_app_name=%web_app_name%" ^
+                        && exit /b 0
+                    set /a RETRY_COUNT+=1
+                    if %RETRY_COUNT% LSS 3 (
+                        echo Retry %RETRY_COUNT% of 3 for terraform apply failed, waiting 30 seconds...
+                        timeout /t 30 /nobreak >nul 2>&1
+                        goto retry_apply
+                    )
+                    echo Terraform apply failed after 3 retries
+                    exit /b 1
                 '''
             }
         }
