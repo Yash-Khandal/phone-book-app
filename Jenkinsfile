@@ -49,7 +49,6 @@ pipeline {
                     echo web_app_name="%web_app_name%" >> terraform.tfvars
                 '''
                 
-                // Import existing resource group
                 bat 'terraform import azurerm_resource_group.rg /subscriptions/%ARM_SUBSCRIPTION_ID%/resourceGroups/%resource_group_name% || echo "Import may have failed - continuing"'
                 
                 bat 'terraform plan -var-file="terraform.tfvars"'
@@ -68,7 +67,11 @@ pipeline {
 
         stage('Deploy to Azure') {
             steps {
-                powershell 'Compress-Archive -Path "react-app\\build\\*" -DestinationPath "build.zip" -Force'
+                // Change to the react-app directory before zipping
+                dir('react-app') {
+                    powershell 'Compress-Archive -Path "./build/*" -DestinationPath "../build.zip" -Force'
+                }
+                
                 bat '''
                     az login --service-principal -u %ARM_CLIENT_ID% -p %ARM_CLIENT_SECRET% --tenant %ARM_TENANT_ID%
                     az webapp deploy --resource-group %resource_group_name% --name %web_app_name% --src-path build.zip --type zip
