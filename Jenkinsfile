@@ -105,11 +105,22 @@ pipeline {
             }
         }
 
-        stage('Build and Package React App') {
+        stage('Build React App') {
             steps {
                 dir('react-app') {
                     bat 'npm install'
                     bat 'npm run build'
+                }
+            }
+        }
+
+        stage('Deploy to Azure') {
+            steps {
+                dir('react-app') {
+                    // Debug: List directory contents
+                    bat 'dir'
+                    
+                    // Create the zip file using absolute path
                     powershell '''
                         if (Test-Path -Path "build") {
                             Compress-Archive -Path "build/*" -DestinationPath "$env:WORKSPACE/build.zip" -Force
@@ -120,11 +131,8 @@ pipeline {
                         }
                     '''
                 }
-            }
-        }
-
-        stage('Deploy to Azure') {
-            steps {
+                
+                // Deploy using the zip file from the workspace root
                 bat '''
                     az login --service-principal -u %ARM_CLIENT_ID% -p %ARM_CLIENT_SECRET% --tenant %ARM_TENANT_ID%
                     az webapp deploy --resource-group %resource_group_name% --name %web_app_name% --src-path build.zip --type zip
