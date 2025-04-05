@@ -1,15 +1,16 @@
 pipeline {
     agent any
-    
+
     environment {
         AZURE_SUBSCRIPTION_ID = '6c1e198f-37fe-4942-b348-c597e7bef44b'
         AZURE_CLIENT_ID = '0e6e41d3-5440-4176-a735-9dfdaf0f886c'
-        AZURE_CLIENT_SECRET = 'LvU8Q~KHHAnB.prsihzhfKNBDsf6UwLqFBGVBcsY'
+        AZURE_CLIENT_SECRET = credentials('azure-client-secret') // Use Jenkins credentials
         AZURE_TENANT_ID = '341f4047-ffad-4c4a-a0e7-b86c7963832b'
         RESOURCE_GROUP = 'phonebook-app-rg'
         APP_NAME_PREFIX = 'phonebook-app'
+        API_ENDPOINT = 'https://api.example.com' // Define API endpoint
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
@@ -23,25 +24,25 @@ pipeline {
                 ])
             }
         }
-        
+
         stage('Install Dependencies') {
             steps {
                 bat 'npm install'
             }
         }
-        
+
         stage('Build') {
             steps {
                 bat 'npm run build'
             }
         }
-        
+
         stage('Terraform Init') {
             steps {
                 bat 'terraform init'
             }
         }
-        
+
         stage('Terraform Plan') {
             steps {
                 bat """
@@ -51,15 +52,8 @@ pipeline {
                 -var="client_secret=%AZURE_CLIENT_SECRET%" ^
                 -var="tenant_id=%AZURE_TENANT_ID%" ^
                 -var="app_version=${env.BUILD_ID}" ^
+                -var="api_endpoint=%API_ENDPOINT%" ^
                 -out=tfplan
-                """
-            }
-        }
-        
-        stage('Terraform Import') {
-            steps {
-                bat """
-                terraform import azurerm_resource_group.phonebook_rg /subscriptions/%AZURE_SUBSCRIPTION_ID%/resourceGroups/%RESOURCE_GROUP%
                 """
             }
         }
@@ -69,7 +63,7 @@ pipeline {
                 bat 'terraform apply -auto-approve tfplan'
             }
         }
-        
+
         stage('Get App URL') {
             steps {
                 script {
@@ -82,11 +76,14 @@ pipeline {
             }
         }
     }
-    
+
     post {
         always {
-            cleanWs()
-            bat 'set AZURE_CLIENT_SECRET='
+            cleanWs() // Clean workspace
+            script {
+                // Mask sensitive information
+                env.AZURE_CLIENT_SECRET = ''
+            }
         }
     }
 }
