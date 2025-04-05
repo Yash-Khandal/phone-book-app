@@ -6,7 +6,7 @@ pipeline {
         AZURE_CLIENT_ID = '0e6e41d3-5440-4176-a735-9dfdaf0f886c'
         AZURE_CLIENT_SECRET = 'LvU8Q~KHHAnB.prsihzhfKNBDsf6UwLqFBGVBcsY'
         AZURE_TENANT_ID = '341f4047-ffad-4c4a-a0e7-b86c7963832b'
-        RESOURCE_GROUP = 'phonebook-app-rg
+        RESOURCE_GROUP = 'phonebook-app-rg'
         APP_NAME_PREFIX = 'phonebook-app'
     }
     
