@@ -80,7 +80,16 @@ pipeline {
                         || echo "Import may have failed - continuing"
                 '''
                 
+                // Debug: Output the Terraform state
                 bat '''
+                    terraform state list
+                    terraform state show azurerm_linux_web_app.app
+                '''
+                
+                // Retry terraform plan up to 3 times
+                bat '''
+                    set RETRY_COUNT=0
+                    :retry
                     terraform plan ^
                         -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
                         -var "client_id=%ARM_CLIENT_ID%" ^
@@ -89,8 +98,18 @@ pipeline {
                         -var "resource_group_name=%resource_group_name%" ^
                         -var "location=East US" ^
                         -var "app_service_plan=phonebook-app-plan" ^
-                        -var "web_app_name=%web_app_name%"
+                        -var "web_app_name=%web_app_name%" ^
+                        && exit /b 0
+                    set /a RETRY_COUNT+=1
+                    if %RETRY_COUNT% LSS 3 (
+                        echo Retry %RETRY_COUNT% of 3: terraform plan failed, waiting 10 seconds...
+                        timeout /t 10 /nobreak
+                        goto retry
+                    )
+                    echo Terraform plan failed after 3 retries
+                    exit /b 1
                 '''
+                
                 bat '''
                     terraform apply -auto-approve ^
                         -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
