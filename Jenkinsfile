@@ -50,6 +50,7 @@ pipeline {
                 -var="client_id=%AZURE_CLIENT_ID%" ^
                 -var="client_secret=%AZURE_CLIENT_SECRET%" ^
                 -var="tenant_id=%AZURE_TENANT_ID%" ^
+                -var="app_version=${env.BUILD_ID}" ^
                 -out=tfplan
                 """
             }
