@@ -80,7 +80,16 @@ pipeline {
                         || echo "Import may have failed - continuing"
                 '''
                 
+                // Debug: Output the Terraform state
                 bat '''
+                    terraform state list
+                    terraform state show azurerm_linux_web_app.app
+                '''
+                
+                // Retry terraform plan up to 3 times
+                bat '''
+                    set RETRY_COUNT=0
+                    :retry_plan
                     terraform plan ^
                         -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
                         -var "client_id=%ARM_CLIENT_ID%" ^
@@ -89,9 +98,22 @@ pipeline {
                         -var "resource_group_name=%resource_group_name%" ^
                         -var "location=East US" ^
                         -var "app_service_plan=phonebook-app-plan" ^
-                        -var "web_app_name=%web_app_name%"
+                        -var "web_app_name=%web_app_name%" ^
+                        && exit /b 0
+                    set /a RETRY_COUNT+=1
+                    if %RETRY_COUNT% LSS 3 (
+                        echo Retry %RETRY_COUNT% of 3 for terraform plan failed, waiting 30 seconds...
+                        timeout /t 30 /nobreak >nul 2>&1
+                        goto retry_plan
+                    )
+                    echo Terraform plan failed after 3 retries
+                    exit /b 1
                 '''
+                
+                // Retry terraform apply up to 3 times
                 bat '''
+                    set RETRY_COUNT=0
+                    :retry_apply
                     terraform apply -auto-approve ^
                         -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
                         -var "client_id=%ARM_CLIENT_ID%" ^
@@ -100,27 +122,25 @@ pipeline {
                         -var "resource_group_name=%resource_group_name%" ^
                         -var "location=East US" ^
                         -var "app_service_plan=phonebook-app-plan" ^
-                        -var "web_app_name=%web_app_name%"
+                        -var "web_app_name=%web_app_name%" ^
+                        && exit /b 0
+                    set /a RETRY_COUNT+=1
+                    if %RETRY_COUNT% LSS 3 (
+                        echo Retry %RETRY_COUNT% of 3 for terraform apply failed, waiting 30 seconds...
+                        timeout /t 30 /nobreak >nul 2>&1
+                        goto retry_apply
+                    )
+                    echo Terraform apply failed after 3 retries
+                    exit /b 1
                 '''
             }
         }
 
-        stage('Build React App') {
+        stage('Build and Package React App') {
             steps {
                 dir('react-app') {
                     bat 'npm install'
                     bat 'npm run build'
-                }
-            }
-        }
-
-        stage('Deploy to Azure') {
-            steps {
-                dir('react-app') {
-                    // Debug: List directory contents
-                    bat 'dir'
-                    
-                    // Create the zip file using absolute path
                     powershell '''
                         if (Test-Path -Path "build") {
                             Compress-Archive -Path "build/*" -DestinationPath "$env:WORKSPACE/build.zip" -Force
@@ -131,8 +151,11 @@ pipeline {
                         }
                     '''
                 }
-                
-                // Deploy using the zip file from the workspace root
+            }
+        }
+
+        stage('Deploy to Azure') {
+            steps {
                 bat '''
                     az login --service-principal -u %ARM_CLIENT_ID% -p %ARM_CLIENT_SECRET% --tenant %ARM_TENANT_ID%
                     az webapp deploy --resource-group %resource_group_name% --name %web_app_name% --src-path build.zip --type zip
